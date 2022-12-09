@@ -1,4 +1,0 @@
-vertices = {'a': (13, 18), 'b': (14, 10)}
-graph = {'a': ['b'], 'b': ['a']}
-prob = 0.5
-Adjancecy matrix =[[0, 1], [1, 0]]
