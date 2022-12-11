@@ -159,3 +159,10 @@ The choice made at each step is
     ❑ Feasible : satisfies constraints
     ❑ Locally optimal : best choice at each step
     ❑ Irrevocable
+
+
+
+
+e foi assim que o João Reis nunca mais foi às aulas de AA
+vitória, vitória, acabou-se a história!
+bom estudo :)
