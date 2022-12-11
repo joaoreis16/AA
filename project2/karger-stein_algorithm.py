@@ -1,13 +1,7 @@
 from Graph import Graph
 import time, random, math, copy, os, sys
 
-SW_GRAPHS_PATH = "sw_graphs"
-
-""" 
-    (1)  the number of basic operations carried out
-    (X)  the execution time
-    (X)  the number of solutions / configurations tested.
-"""
+SW_GRAPHS_PATH = "sw_graphs"        # change this path if needed
 
 class KargerStein:
     solutions = 0
@@ -19,7 +13,6 @@ class KargerStein:
     def get_iterations(self):
         return self.iterations
 
-
     def search(self, graph):
         """ 
         Implementation of Karger-Stein Algorithm 
@@ -29,23 +22,16 @@ class KargerStein:
 
         if n <= 6: 
             # find a min_cut using normal Karger's Algorithm 
-            print(">> Karger's Algorithm (2)")
-
-            # number of solution increases because when the graph has 2 vertices, this is a possible solution
-            self.solutions += 1
             return self.find_min_cut(g)      # Karger's Algorithm - until graph reaches 2 vertices
 
         else:
             # run Karger's Algorithm - until graph reaches t vertices 
             # If we contract from n nodes down to n/sqrt(2) nodes, the probability that we don't contract an edge in the min cut is about 50% !! 
             t = math.floor(1 + (n / math.sqrt(2))) 
-            print(">> Karger's Algorithm ("+ str(t) +")")
-
             g1 = self.contract(g, t)
             g2 = self.contract(g, t)
 
             return min( self.search(g1), self.search(g2) )
-
 
     def contract(self, g, min_vert):
         """
@@ -63,20 +49,26 @@ class KargerStein:
 
             r = random.randrange(0, num_edges)
             random_edge = edges[r]
-
             g.contract_vertices(random_edge)
+
+            # cada contração é uma iteração
+            self.iterations += 1
 
             n = len(g.get_vertices())
 
         return g
             
-
     def find_min_cut(self, graph):
         m = len(graph.get_edges())
+        n = len(graph.get_vertices())
 
-        g = self.contract(graph, 2)
-        m = min(m, len(g.get_edges())) 
+        # For failure probabilty upper bound of 1/n, repeat the algorithm nC2 logn times
+        nC2 = int(n * (n-1) * math.log(n)/2)
+        for _ in range( nC2 ):
+            g = self.contract(graph, 2)
+            m = min(m, len(g.get_edges())) 
             
+        self.solutions += 1
         return m
 
 
@@ -92,7 +84,7 @@ def main(generate_graphs, inputfile):
     if isExist: os.remove(results_path)
 
     if generate_graphs:
-        for num_vert in range(4,18):
+        for num_vert in range(4, 50):
             for p in prob:
                 g = Graph()
                 new_graph = g.generate_graph(num_vert, p)
@@ -101,37 +93,12 @@ def main(generate_graphs, inputfile):
                     g.set_name("graph" + str(index) +".txt")
                     all_graph.append(g)
                     index += 1
-
-        start_time = time.time()
-        results = {}
-
-        for graph in all_graph:
-            karger = KargerStein()
-
-            start = time.time()
-            min_cut = karger.search(graph)
-            end_time = (time.time() - start)
-
-            results[graph] = (min_cut, end_time, karger.get_solutions(), karger.get_iterations())
-
-        total_exec_time = (time.time() - start_time)
-
-        print("\n=============== Results for generated graphs===============")
-        for graph, info in results.items(): 
-            print(f"{graph.get_name()} | mininum cut: {str(info[0])} | time: {str(info[1])}s | iteractions: {str(info[3])} | solutions: {str(info[2])}")
-
-        print("\nTotal Execution Time = "+ str(total_exec_time) +"s")
-        write_results(results)
-
    
     if inputfile:
-        all_graph.clear()
         os.chdir(SW_GRAPHS_PATH)
 
-        if inputfile == "all":
-            graph_files = [ fname for fname in os.listdir() ]
-        else:
-            graph_files = [ fname for fname in os.listdir() if inputfile in fname ]
+        if inputfile == "all":   graph_files = [ fname for fname in os.listdir() if 'large' not in fname ]
+        else:                    graph_files = [ fname for fname in os.listdir() if inputfile in fname ]
 
         open_files = [ open(file, 'r') for file in graph_files ]
         
@@ -164,26 +131,25 @@ def main(generate_graphs, inputfile):
 
         os.chdir("..")
 
-        start_time = time.time()
-        results = {}
+    start_time = time.time()
+    results = {}
 
-        for graph in all_graph:
-            karger = KargerStein()
+    for graph in all_graph:
+        karger = KargerStein()
 
-            start = time.time()
-            min_cut = karger.search(graph)
-            end_time = (time.time() - start)
+        start = time.time()
+        min_cut = karger.search(graph)
+        end_time = (time.time() - start)
 
-            results[graph] = (min_cut, end_time, karger.get_solutions(), karger.get_iterations())
+        results[graph] = (min_cut, end_time, karger.get_solutions(), karger.get_iterations())
 
-        total_exec_time = (time.time() - start_time)
+    total_exec_time = (time.time() - start_time)
 
-        print("\n=============== Results for graph instances available on E-Learning ===============")
-        for graph, info in results.items(): 
-            print(f"{graph.get_name()} | mininum cut: {str(info[0])} | time: {str(info[1])}s | iteractions: {str(info[3])} | solutions: {str(info[2])}")
-
-        print("\nTotal Execution Time = "+ str(total_exec_time) +"s")
-        write_results(results)
+    print("\n============================== RESULTS ==============================")
+    for graph, info in results.items(): 
+        print(f"{graph.get_name()} | mininum cut: {str(info[0])} | time: {str(info[1])}s | iteractions: {str(info[3])} | solutions: {str(info[2])}")
+    print("\nTotal Execution Time = "+ str(total_exec_time) +"s")
+    write_results(results)
 
 
 def write_results(results):
@@ -196,17 +162,20 @@ def write_results(results):
     else: write_type = 'w+'
 
     with open(filepath, write_type) as f:
-        if write_type == 'w+': f.write("n best_solution solutions iterations time(s)\n")
+        if write_type == 'w+': f.write("n min_cut solutions iterations time(s) index\n")
         for graph, info in results.items():
             n = len(graph.get_vertices())   # num vertices
-            min_cut = info[0]               # best solution found
+            min_cut = info[0]               # best minimum cut found
             solutions = info[2]             # num solutions tested
             iterations = info[3]            # num iterations
             exec_time = info[1]             # execution time
+            index = list(results.keys()).index(graph) + 1
 
-            f.write("%s %s %s %s %f\n" % (n, min_cut, solutions, iterations, exec_time))
+            f.write("%s %s %s %s %f %s\n" % (n, min_cut, solutions, iterations, exec_time, index))
+
 
 if __name__ == "__main__":
+
     argv = sys.argv[1:]
     error_msg = """\npython3 karger-stein_algorithm.py -g -f <inputfile: tiny, medium, large, all>\n
         >> Legend (choose one or both)
@@ -227,7 +196,6 @@ if __name__ == "__main__":
             index = argv.index(opt) + 1
             try:
                 inputfile = argv[index]
-
             except:
                 print(error_msg)
                 sys.exit()

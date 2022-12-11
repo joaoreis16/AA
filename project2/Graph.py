@@ -188,9 +188,6 @@ class Graph:
         head = self.graph[v1]
         tail = self.graph[v2]
 
-        """ print("head",head)
-        print("tail",tail) """
-
         # remover a aresta (v1,v2)
         head.remove(v2)
         tail.remove(v1)
