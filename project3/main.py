@@ -19,7 +19,7 @@ def calc_prob(counter):
 
 
 def exact_counters(content):
-    """ Function that returns the exact frequency of each word"""
+    """ Function that returns the exact frequency of each letter"""
     exact_freq = dict(Counter(content))
     return sort_dict(exact_freq)
 
@@ -35,47 +35,45 @@ def decreasing_probability_counter(k):
     return count
 
 
-def estimate_frequent_words(method, content, k):
+def estimate_frequent_letters(method, content, k):
     """
-    Estimates the k most frequent words using the Decreasing probability counter with a probability of 1/2^k.
+    Estimates the k most frequent letters using the Decreasing probability counter with a probability of 1/2^k.
     """
     estimate_freq = {}
 
     if method == "Decreasing probability counter":
-        for word in content:
+        for letter in content:
             count = decreasing_probability_counter(k)
 
-            if word in estimate_freq:
-                estimate_freq[word] += count
+            if letter in estimate_freq:
+                estimate_freq[letter] += count
             else:
-                estimate_freq[word] = count
+                estimate_freq[letter] = count
         
     elif method == "Lossy-Count":
         # It is a probabilistic data structure that allows you to estimate the count of items with a certain error rate (threshold).
         error_bound = 1
 
         # Iterate through the items
-        for word in content:
+        for letter in content:
             # Increment the count of the item
-            if word in estimate_freq:
-                estimate_freq[word] += 1
+            if letter in estimate_freq:
+                estimate_freq[letter] += 1
             else:
-                estimate_freq[word] = 1
+                estimate_freq[letter] = 1
 
             # Decrease the error bound by threshold
             error_bound -= THRESHOLD
 
             # If the error bound becomes negative, divide all counts by 2 and reset the error bound to 1
             if error_bound < 0:
-                estimate_freq = { word : floor( estimate_freq[word] / 2 ) for word in estimate_freq.keys() }
-                """ for key in estimate_freq:
-                    estimate_freq[key] = floor(estimate_freq[key] / 2 ) """
+                estimate_freq = { letter : floor( estimate_freq[letter] / 2 ) for letter in estimate_freq.keys() }
                 error_bound = 1
 
     else:
         raise Exception(f"Error: the method '{method}' is unknown.")
 
-    estimate_freq = sort_dict(estimate_freq)   # sort the dict by word estimate frequency
+    estimate_freq = sort_dict(estimate_freq)   # sort the dict by letter estimate frequency
     return { i : estimate_freq[i] for i in list(estimate_freq.keys())[:k] } # returning the top k most frequent letters
 
 
@@ -103,22 +101,22 @@ def read_and_process():
                 line = line[:-1].split(" ")
                 words += [ word.translate(str.maketrans('', '', stop_marks)).upper() for word in line if word.lower() not in stop_words ]    # remove stop words and punctuations marks
 
-    return list(filter(lambda word: word != '', words))
+    words = list(filter(lambda word: word != '', words))
+    return ''.join(words)   # join all words in one string without spaces
      
    
 def main():
     """ The main function """
-    words = read_and_process()
+    content = read_and_process()
     
     # Exact counters
-    exact_freq = exact_counters(words)
+    exact_freq = exact_counters(content)
 
     # Approximate counters: Decreasing probability counter (1 / 2^k)
-    prob_counter_freq = { k : estimate_frequent_words("Decreasing probability counter", words, k) for k in K }
+    prob_counter_freq = { k : estimate_frequent_letters("Decreasing probability counter", content, k) for k in K }
 
     # Algorithm to identify frequent items in data streams: Lossy-Count
-    lossy_count_freq  = { k : estimate_frequent_words("Lossy-Count", words, k) for k in K }
-
+    lossy_count_freq  = { k : estimate_frequent_letters("Lossy-Count", content, k) for k in K }
 
     # print results
     topten = { i : exact_freq[i] for i in list(exact_freq.keys())[:10] }
@@ -138,7 +136,7 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     msg = f"""===========================================================================
     python3 main.py -t <threshold: float>\n
-        -t | choose the threshold to use on Lossy-Count algorithm (float)
+        -t | (optional) choose the threshold to use on Lossy-Count algorithm (float)
            | by default, threshold= {THRESHOLD}\n
 ===========================================================================\n"""
 
@@ -151,5 +149,4 @@ if __name__ == "__main__":
             except:
                 print("Error: threshold value must be a float.")
                 sys.exit()
-
     main()
