@@ -3,7 +3,6 @@ import sys, os, string, random, time, unidecode, json
 
 # Change this default variables, if needed
 FILES_PATH = 'books'            # the txt files path 
-THRESHOLD = 0.0001              # threshold used for Lossy-Count
 REPETITIONS = 10                # number of repetitions used for approximate counters
 K = [3, 5, 10]                  # K values to use on data stream algorithm (Lossy-Count)
 
@@ -57,29 +56,29 @@ def estimate_frequent_letters(method, content, k=None):
         
     elif method == "Lossy-Count":
         # Algorithm to identify frequent items in data streams: Lossy-Count
-        error = 1
+        n = 0
+        delta = 0
 
         # Iterate through the content
         for letter in content:
-            # Increment the count of the letter
+            n += 1
+
             if letter in estimate_freq:
                 estimate_freq[letter] += 1
             else:
-                estimate_freq[letter] = 1
+                estimate_freq[letter] = 1 + delta
 
-            # Decrease the error bound by threshold
-            error -= THRESHOLD
+            if n // k != delta:
+                delta = n // k
+                delete_letters = [ letter for letter, counter in estimate_freq.items()  if counter < delta ]
 
-            # If the error bound becomes negative, divide all counts by 2 and reset the error bound to 1
-            if error < 0:
-                estimate_freq = { letter : estimate_freq[letter] - 1 for letter in estimate_freq.keys() }
-                error = 1
+                for letter in delete_letters:
+                    del estimate_freq[letter]
 
     else:
         raise Exception(f"Error: the method '{method}' is unknown.")
 
     estimate_freq = sort(estimate_freq)   # sort the dict by letter estimate frequency
-    if k: estimate_freq = { i : estimate_freq[i] for i in list(estimate_freq.keys())[:k] } # returning the top k most frequent letters
     return estimate_freq
 
 
@@ -91,19 +90,18 @@ def error_stats(language_freq, method):
         f.write(f">> {language}\n")
 
         exact_values = language_freq[language]["exact"]
-        if method == "prob_counter": prob_counter_values = language_freq[language][method]
-        else: prob_counter_values = language_freq[language][method][10]
+        if method == "prob_counter": 
+            prob_counter_values = language_freq[language][method]
+
+        else: 
+            prob_counter_values = language_freq[language][method][10]
 
         info = {}
-
         for letter in prob_counter_values.keys():
-        
-            ### Decreasing probability counter
             abs_error = abs(exact_values[letter] - prob_counter_values[letter])         # Calculate absolute error
             rel_error = abs_error / exact_values[letter]                                # Calculate relative error
 
             info.update( { letter : { "absolute_error": abs_error, "relative_error": rel_error }} )
-
 
         f.write(json.dumps(info))
         f.write('\n')      
@@ -203,7 +201,7 @@ def main():
         print(f'      | {count["prob_counter"]}')  
         print(f'\n\tExecution time: {exec_times["prob_counter"]}s\n')
 
-        print(f"\n>> Lossy-Count (threshold={THRESHOLD})")
+        print(f"\n>> Lossy-Count")
         for k, count in count["lossy-count"].items():
             print(f'k= {k} | {count}') if k not in [3,5] else print(f'k= {k}  | {count}')
         print(f'\n\tExecution time: {exec_times["lossy-count"]}s\n')
@@ -213,23 +211,14 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     msg = f"""=================================================================================================
     python3 main.py (-t <threshold: float>) (-r <repetitions: int>)\n
-        -t | (optional) choose the threshold to use on Lossy-Count algorithm (float)
-           | by default, threshold= {THRESHOLD}
-           
+          
         -r | (optional) choose the number of repetitions to use on Approximate counters (int)
            | by default, repetitions= {REPETITIONS}\n
+
 =================================================================================================\n"""
 
     print(msg)
     for opt in argv:
-        if opt == "-t":
-            index = argv.index(opt) + 1
-            try:
-                THRESHOLD = float(argv[index])
-            except:
-                print("Error: threshold value must be a float.")
-                sys.exit()
-
         if opt == "-r":
             index = argv.index(opt) + 1
             try:
